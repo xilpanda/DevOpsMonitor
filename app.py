@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+import os  # Import za rad sa environment varijablama
 
 app = Flask(__name__)
 
@@ -44,4 +45,5 @@ def delete_server(server_id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))  # Čita port iz environment varijabli ili koristi 5000 kao podrazumevani
+    app.run(debug=False, host='0.0.0.0', port=port)
