@@ -28,5 +28,5 @@ jobs:
 
     - name: Run tests
       run: |
-        # Dodajte komande za testiranje ovde
+        # Add command for testing
         echo "Tests passed successfully!"
