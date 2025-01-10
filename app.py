@@ -1,51 +1,75 @@
 from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 import os  # Import za rad sa environment varijablama
 
 app = Flask(__name__)
 
-# Test podaci
-servers = [
-    {"id": 1, "name": "Server 1", "status": "Online"},
-    {"id": 2, "name": "Server 2", "status": "Offline"}
-]
+# Konfiguracija baze podataka
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///servers.db')  # Koristi SQLite lokalno ili PostgreSQL na Heroku
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Model za tabelu servera
+class Server(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(20), nullable=False)
 
 # Početna strana - lista servera
 @app.route('/')
 def index():
+    servers = Server.query.all()
     return render_template('index.html', servers=servers)
 
 # Forma za dodavanje novog servera
 @app.route('/add', methods=['GET', 'POST'])
 def add_server():
     if request.method == 'POST':
-        new_id = len(servers) + 1
         name = request.form['name']
         status = request.form['status']
-        servers.append({"id": new_id, "name": name, "status": status})
+        new_server = Server(name=name, status=status)
+        db.session.add(new_server)
+        db.session.commit()
         return redirect(url_for('index'))
     return render_template('server_form.html', action="Add")
 
 # Forma za izmjenu postojećeg servera
 @app.route('/edit/<int:server_id>', methods=['GET', 'POST'])
 def edit_server(server_id):
-    global servers  # Osigurava korišćenje globalne liste servers
-    server = next((s for s in servers if s['id'] == server_id), None)
+    server = Server.query.get(server_id)
     if not server:
         return "Server not found", 404
-    if request.method == 'POST':
-        server['name'] = request.form['name']
-        server['status'] = request.form['status']
-        return redirect(url_for('index'))
-    return render_template('server_form.html', action="Edit", server=server)
 
+    if request.method == 'POST':
+        server.name = request.form.get('name', server.name)
+        server.status = request.form.get('status', server.status)
+        db.session.commit()
+        return redirect(url_for('index'))
+
+    return render_template('server_form.html', action="Edit", server=server)
 
 # Brisanje servera
 @app.route('/delete/<int:server_id>', methods=['POST'])
 def delete_server(server_id):
-    global servers
-    servers = [s for s in servers if s['id'] != server_id]
+    server = Server.query.get(server_id)
+    if server:
+        db.session.delete(server)
+        db.session.commit()
     return redirect(url_for('index'))
 
+# Inicijalizacija baze podataka i dodavanje test podataka (samo lokalno)
+with app.app_context():
+    db.create_all()
+    # Dodavanje test podataka ako baza nema nijedan unos
+    if Server.query.count() == 0:
+        test_servers = [
+            Server(name="Server 1", status="Online"),
+            Server(name="Server 2", status="Offline")
+        ]
+        db.session.add_all(test_servers)
+        db.session.commit()
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Čita port iz environment varijabli ili koristi 5000 kao podrazumevani
+    port = int(os.environ.get('PORT', 5001))  # Koristi port 5001 lokalno
     app.run(debug=False, host='0.0.0.0', port=port)
+
