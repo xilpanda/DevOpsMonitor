@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import os  # Import za rad sa environment varijablama
 
@@ -57,6 +57,20 @@ def delete_server(server_id):
         db.session.commit()
     return redirect(url_for('index'))
 
+# API endpoint za vraćanje podataka iz baze kao JSON
+@app.route('/api/servers', methods=['GET'])
+def get_servers():
+    servers = Server.query.all()
+    pipelines_data = [
+        {
+            "id": server.id,
+            "name": server.name,
+            "status": server.status
+        }
+        for server in servers
+    ]
+    return jsonify(pipelines_data)
+
 # Inicijalizacija baze podataka i dodavanje test podataka (samo lokalno)
 with app.app_context():
     db.create_all()
@@ -72,4 +86,3 @@ with app.app_context():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))  # Koristi port 5001 lokalno
     app.run(debug=False, host='0.0.0.0', port=port)
-
