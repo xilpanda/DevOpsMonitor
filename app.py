@@ -28,6 +28,7 @@ def add_server():
 # Forma za izmjenu postojećeg servera
 @app.route('/edit/<int:server_id>', methods=['GET', 'POST'])
 def edit_server(server_id):
+    global servers  # Osigurava korišćenje globalne liste servers
     server = next((s for s in servers if s['id'] == server_id), None)
     if not server:
         return "Server not found", 404
@@ -36,6 +37,7 @@ def edit_server(server_id):
         server['status'] = request.form['status']
         return redirect(url_for('index'))
     return render_template('server_form.html', action="Edit", server=server)
+
 
 # Brisanje servera
 @app.route('/delete/<int:server_id>', methods=['POST'])
